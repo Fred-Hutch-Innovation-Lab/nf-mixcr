@@ -1,0 +1,32 @@
+nextflow_workflow {
+
+    name "Test Workflow DOWNSAMPLE_FASTQ"
+    script "modules/local/downsample_fastq.nf"
+    workflow "DOWNSAMPLE_FASTQ"
+
+    test("Deterministic downsampling") {
+
+        when {
+            workflow {
+                """
+                // define inputs of the workflow here. Example:
+                input[0] = Channel.of([
+                    [id: 'test_sample'],
+                    [file("${projectDir}/tests/data/C2-R-F1SA_S1_R1_001.fastq.gz"),
+                     file("${projectDir}/tests/data/C2-R-F1SA_S1_R2_001.fastq.gz")]
+                ])
+                input[1] = 10000
+                """
+            }
+        }
+
+        then {
+            assert workflow.success
+            assert path(workflow.out.fastqs.get(0).get(1).get(0)).md5 == "05053cf89ed9bd37c3ebc54cb5bb7f46"
+            assert path(workflow.out.fastqs.get(0).get(1).get(1)).md5 == "decdbf0dbf972b3870b8409a547f19f6"
+            // assert snapshot(workflow.out).match()
+        }
+
+    }
+
+}

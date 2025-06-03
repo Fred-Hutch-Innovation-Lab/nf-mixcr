@@ -1,0 +1,47 @@
+nextflow_process {
+    name "Test process CONCATENATE_FASTQ"
+    script "modules/local/concatenate_fastq.nf"
+    process "CONCATENATE_FASTQ"
+
+    test("Pass through individual FASTQ") {
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [id: 'test_sample'],
+                    file("${projectDir}/tests/data/C2-R-F2SB_S4_R1_002.fastq.gz")
+                    //[file("${projectDir}/tests/data/C2-R-F2SB_S4_R1_001.fastq.gz"),
+                    // file("${projectDir}/tests/data/C2-R-F2SB_S4_R1_002.fastq.gz")]
+                ])
+                """
+            }
+        }
+        then {
+            assert workflow.success
+            // Fastq is symlink
+            def filePath = process.out[0][0][1]
+            assert FileUtils.isSymbolicLink(filePath)
+        }
+    }
+
+    test("Combine multiple files from same lane") {
+        when {
+            process {
+                """
+                input[0] = Channel.of([
+                    [id: 'test_sample'],
+                    [file("${projectDir}/tests/data/C2-R-F2SB_S4_R1_001.fastq.gz"),
+                     file("${projectDir}/tests/data/C2-R-F2SB_S4_R1_002.fastq.gz")]
+                ])
+                """
+            }
+        }
+        then {
+            assert workflow.success
+            // Fastq is NOT symlink
+            def filePath = process.out[0][0][1]
+            assert !FileUtils.isSymbolicLink(filePath)
+            assert path(filePath).md5 == "327d760f5db952d706802ba47b2232a8"
+        }
+    }
+}
