@@ -45,7 +45,7 @@ include { CONCATENATE_FASTQ } from './modules/local/concatenate_fastq.nf'
 include { DOWNSAMPLE_FASTQ } from './modules/local/downsample_fastq.nf'
 include { PARSE_SAMPLESHEET } from './modules/local/parse_samplesheet.nf'
 include { LOG_VERSIONS } from './modules/local/log_versions.nf'
-
+include { MIXCR } from './modules/local/mixcr.nf'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     MAIN WORKFLOW
@@ -60,20 +60,34 @@ workflow {
     CONCATENATE_FASTQ(ch_fastqs)
     ch_fastqs = CONCATENATE_FASTQ.out.fastqs
     DOWNSAMPLE_FASTQ(ch_fastqs, params.downsample_target)
+    ch_fastqs = DOWNSAMPLE_FASTQ.out.fastqs
 
-    ch_versions = ch_versions.mix(
-        // CONCATENATE_FASTQ.out.versions
-        DOWNSAMPLE_FASTQ.out.versions
-    )
-    LOG_VERSIONS(ch_versions)
+    ch_preset = 'rna-seq'
+    MIXCR(ch_fastqs, ch_preset, params.mixcr_license)
+    // ch_versions = ch_versions.mix(
+    //     // CONCATENATE_FASTQ.out.versions
+    //     DOWNSAMPLE_FASTQ.out.versions.first(),
+    //     MIXCR.out.versions.first()
+    // )
+    // LOG_VERSIONS(ch_versions)
+    // ch_versions = LOG_VERSIONS.out.versions
 
     publish:
-    versions = LOG_VERSIONS.out.versions // >> 'versions'
+    clonotypes = MIXCR.out.clonotypes
+    reports = MIXCR.out.reports
+    // versions = ch_versions // >> 'versions'
 }
 
 output {
-    versions {
-        // path "pipeline_versions.yml"
+    // versions {
+    //     // path "pipeline_versions.yml"
+    //     mode 'copy'
+    // }
+    reports {
         mode 'copy'
     }
+    clonotypes {
+        mode 'copy'
+    }
+
 }
