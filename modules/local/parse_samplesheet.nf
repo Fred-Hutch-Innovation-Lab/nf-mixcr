@@ -8,7 +8,12 @@ workflow PARSE_SAMPLESHEET {
         .splitCsv(header: true)
         .map { row ->
             def glob_pattern = "${params.run_dir}/${row.fastq_prefix}_*.fastq*"
-            def fq_files = file(glob_pattern).collect()
+            def fq_files = []
+            new File(params.run_dir).traverse(type: groovy.io.FileType.FILES) {
+                if (it.name ==~ /${row.fastq_prefix}_.*\.fastq.*/) {
+                    fq_files << it.toString()
+                }
+            }
             if (!fq_files) {
                 throw new IllegalArgumentException("No FASTQ files found for sample: ${row.id} at ${glob_pattern}")
             }

@@ -2,7 +2,7 @@ process MIXCR {
     tag "${meta.id}"
     //conda "${moduleDir}/environment.yml"
     container 'ghcr.io/milaboratory/mixcr/mixcr:4.7.0-164-develop'
-    containerOptions '--bind /loc/scratch:/loc/scratch'
+    containerOptions '--bind $TMPDIR:$TMPDIR'
 
     // Set environment variables for license
     // if (params.license_file) {
@@ -13,7 +13,7 @@ process MIXCR {
 
     input:
     tuple val(meta), path(reads)
-    val preset
+    tuple val(preset), val(material), val(species)
     env MI_LICENSE
 
     output:
@@ -35,8 +35,9 @@ process MIXCR {
     """
     mixcr analyze \
         ${preset} \
+        --${material} \
+        --species ${species} \
         --threads ${task.cpus} \
-        --species ${task.ext.species ?: 'hsa'} \
         ${args} \
         ${reads} \
         ${prefix}

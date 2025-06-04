@@ -54,16 +54,18 @@ include { MIXCR } from './modules/local/mixcr.nf'
 
 workflow {
     main:
-    ch_fastqs = PARSE_SAMPLESHEET(params.samplesheet)
+    PARSE_SAMPLESHEET(params.samplesheet)
+    ch_fastqs = PARSE_SAMPLESHEET.out.ch_fastqs
     ch_versions = Channel.empty()
 
     CONCATENATE_FASTQ(ch_fastqs)
     ch_fastqs = CONCATENATE_FASTQ.out.fastqs
-    DOWNSAMPLE_FASTQ(ch_fastqs, params.downsample_target)
-    ch_fastqs = DOWNSAMPLE_FASTQ.out.fastqs
 
-    ch_preset = 'rna-seq'
-    MIXCR(ch_fastqs, ch_preset, params.mixcr_license)
+    // DOWNSAMPLE_FASTQ(ch_fastqs, params.downsample_target)
+    // ch_fastqs = DOWNSAMPLE_FASTQ.out.fastqs
+
+    args = tuple(params.mixcr_preset, params.mixcr_material, params.mixcr_species)
+    MIXCR(ch_fastqs, args, params.mixcr_license)
     // ch_versions = ch_versions.mix(
     //     // CONCATENATE_FASTQ.out.versions
     //     DOWNSAMPLE_FASTQ.out.versions.first(),
@@ -75,6 +77,7 @@ workflow {
     publish:
     clonotypes = MIXCR.out.clonotypes
     reports = MIXCR.out.reports
+    clns = MIXCR.out.clns
     // versions = ch_versions // >> 'versions'
 }
 
@@ -85,9 +88,21 @@ output {
     // }
     reports {
         mode 'copy'
+        path { sample ->
+            sample[1] >> "mixcr_ouputs/${sample[0].id}/"
+        }
     }
     clonotypes {
         mode 'copy'
+        path { sample ->
+            sample[1] >> "mixcr_ouputs/${sample[0].id}/"
+        }
+    }
+    clns {
+        mode 'copy'
+        path { sample ->
+            sample[1] >> "mixcr_ouputs/${sample[0].id}/"
+        }
     }
 
 }
