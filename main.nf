@@ -46,6 +46,7 @@ include { DOWNSAMPLE_FASTQ } from './modules/local/downsample_fastq.nf'
 include { PARSE_SAMPLESHEET } from './modules/local/parse_samplesheet.nf'
 include { LOG_VERSIONS } from './modules/local/log_versions.nf'
 include { MIXCR } from './modules/local/mixcr.nf'
+include { RUNTIME_SNAPSHOT } from './modules/local/runtime_snapshot.nf'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     MAIN WORKFLOW
@@ -54,23 +55,36 @@ include { MIXCR } from './modules/local/mixcr.nf'
 
 workflow {
     main:
+    RUNTIME_SNAPSHOT()
     PARSE_SAMPLESHEET(params.samplesheet)
     ch_fastqs = PARSE_SAMPLESHEET.out.ch_fastqs
     ch_versions = Channel.empty()
 
     CONCATENATE_FASTQ(ch_fastqs)
+    CONCATENATE_FASTQ.out.stdout.view()
     ch_fastqs = CONCATENATE_FASTQ.out.fastqs
 
     // DOWNSAMPLE_FASTQ(ch_fastqs, params.downsample_target)
     // ch_fastqs = DOWNSAMPLE_FASTQ.out.fastqs
 
-    args = tuple(params.mixcr_preset, params.mixcr_material, params.mixcr_species)
-    MIXCR(ch_fastqs, args, params.mixcr_license)
-    // ch_versions = ch_versions.mix(
-    //     // CONCATENATE_FASTQ.out.versions
-    //     DOWNSAMPLE_FASTQ.out.versions.first(),
-    //     MIXCR.out.versions.first()
-    // )
+    mixcr_args = [
+        params.mixcr_preset,
+        params.mixcr_material,
+        params.mixcr_species,
+        params.mixcr_assemble_clonotypes_by,
+        params.mixcr_left_alignment_boundary,
+        params.mixcr_left_alignment_anchor,
+        params.mixcr_right_alignment_boundary,
+        params.mixcr_right_alignment_anchor,
+        params.mixcr_tag_pattern,
+        params.mixcr_analyze_additional_arguments
+    ]
+    MIXCR(ch_fastqs, params.mixcr_license, mixcr_args)
+    ch_versions = ch_versions.mix(
+        // CONCATENATE_FASTQ.out.versions
+        // DOWNSAMPLE_FASTQ.out.versions.first(),
+        MIXCR.out.versions.first()
+    )
     // LOG_VERSIONS(ch_versions)
     // ch_versions = LOG_VERSIONS.out.versions
 
@@ -78,14 +92,19 @@ workflow {
     clonotypes = MIXCR.out.clonotypes
     reports = MIXCR.out.reports
     clns = MIXCR.out.clns
-    // versions = ch_versions // >> 'versions'
+    run_details = RUNTIME_SNAPSHOT.out.run_details
+    versions = ch_versions // >> 'versions'
 }
 
 output {
-    // versions {
-    //     // path "pipeline_versions.yml"
-    //     mode 'copy'
-    // }
+    versions {
+        path "nextflow_logs/versions.txt"
+        mode 'copy'
+    }
+    run_details {
+        path "nextflow_logs/nextflow_parameters_log.txt"
+        mode 'copy'
+    }
     reports {
         mode 'copy'
         path { sample ->
