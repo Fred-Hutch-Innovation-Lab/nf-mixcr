@@ -8,6 +8,7 @@ process CONCATENATE_FASTQ {
     
     output:
     tuple val(meta), path("*.fastq.gz", includeInputs: false), emit: fastqs
+    stdout emit: stdout
     
     script:
     def files = fastqs.join(' ')

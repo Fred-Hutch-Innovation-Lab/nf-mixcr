@@ -44,6 +44,7 @@ def main():
     for key, files in grouped_files.items():
         outfile = os.path.join(args.output, f"{args.sampleID}_{key}.fastq.gz")
         if len(files) > 1:
+            print(f"Concatenating {len(files)} files ({[os.path.basename(f) for f in files]}) to {outfile}")
             concatenate_files_shutil(files, outfile)
         else:
             if args.copy_method == 'copy':
