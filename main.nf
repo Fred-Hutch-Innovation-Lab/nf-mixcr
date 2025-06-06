@@ -45,7 +45,7 @@ include { CONCATENATE_FASTQ } from './modules/local/concatenate_fastq.nf'
 include { DOWNSAMPLE_FASTQ } from './modules/local/downsample_fastq.nf'
 include { PARSE_SAMPLESHEET } from './modules/local/parse_samplesheet.nf'
 include { LOG_VERSIONS } from './modules/local/log_versions.nf'
-include { MIXCR } from './modules/local/mixcr.nf'
+include { RUN_MIXCR } from './modules/local/mixcr.nf'
 include { RUNTIME_SNAPSHOT } from './modules/local/runtime_snapshot.nf'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -69,27 +69,19 @@ workflow {
 
     mixcr_args = [
         params.mixcr_preset,
-        params.mixcr_material,
-        params.mixcr_species,
-        params.mixcr_assemble_clonotypes_by,
-        params.mixcr_left_alignment_boundary,
-        params.mixcr_left_alignment_anchor,
-        params.mixcr_right_alignment_boundary,
-        params.mixcr_right_alignment_anchor,
-        params.mixcr_tag_pattern,
-        params.mixcr_analyze_additional_arguments
+        params.mixcr_species
     ]
-    MIXCR(ch_fastqs, params.mixcr_license, mixcr_args)
+    RUN_MIXCR(ch_fastqs, params.mixcr_license, mixcr_args)
     ch_versions = ch_versions.mix(
         // CONCATENATE_FASTQ.out.versions
         // DOWNSAMPLE_FASTQ.out.versions.first(),
-        MIXCR.out.versions.first()
+        MIXCR.out.versions
     )
     // LOG_VERSIONS(ch_versions)
     // ch_versions = LOG_VERSIONS.out.versions
 
     publish:
-    clonotypes = MIXCR.out.clonotypes
+    clonotypes = MIXCR.out.clones
     reports = MIXCR.out.reports
     clns = MIXCR.out.clns
     run_details = RUNTIME_SNAPSHOT.out.run_details
@@ -111,7 +103,7 @@ output {
             sample[1] >> "mixcr_ouputs/${sample[0].id}/"
         }
     }
-    clonotypes {
+    clones {
         mode 'copy'
         path { sample ->
             sample[1] >> "mixcr_ouputs/${sample[0].id}/"
